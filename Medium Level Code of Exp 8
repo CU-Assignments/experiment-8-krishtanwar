@@ -1,0 +1,102 @@
+#Creating Table
+
+CREATE TABLE employees (
+    id INT PRIMARY KEY,
+    name VARCHAR(100),
+    position VARCHAR(100),
+    department VARCHAR(100)
+);
+
+#HTML Code
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee List</title>
+</head>
+<body>
+    <h2>Employee List</h2>
+    <form action="search" method="get">
+        <label for="id">Search Employee by ID:</label>
+        <input type="number" id="id" name="id" required>
+        <input type="submit" value="Search">
+    </form>
+    <h3>All Employees</h3>
+    <div id="employeeList">
+        <!-- Employee list will be populated here -->
+    </div>
+</body>
+</html>
+
+# Creating the servlet
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@WebServlet("/search")
+public class EmployeeServlet extends HttpServlet {
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/employee_db";
+    private static final String DB_USER = "Gautam Kumar"; 
+    private static final String DB_PASSWORD = "Gautam@1234"; 
+
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        String idParam = request.getParameter("id");
+        response.setContentType("text/html");
+        PrintWriter out = response.getWriter();
+
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver"); 
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+
+            // Fetch employee by ID
+            if (idParam != null) {
+                int id = Integer.parseInt(idParam);
+                String query = "SELECT * FROM employees WHERE id = ?";
+                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement.setInt(1, id);
+                ResultSet resultSet = preparedStatement.executeQuery();
+
+                out.println("<h2>Employee Details</h2>");
+                if (resultSet.next()) {
+                    out.println("<p>ID: " + resultSet.getInt("id") + "</p>");
+                    out.println("<p>Name: " + resultSet.getString("name") + "</p>");
+                    out.println("<p>Position: " + resultSet.getString("position") + "</p>");
+                    out.println("<p>Department: " + resultSet.getString("department") + "</p>");
+                } else {
+                    out.println("<p>No employee found with ID: " + id + "</p>");
+                }
+            }
+
+            // Fetch all employees
+            out.println("<h3>All Employees</h3>");
+            String allEmployeesQuery = "SELECT * FROM employees";
+            PreparedStatement allEmployeesStatement = connection.prepareStatement(allEmployeesQuery);
+            ResultSet allEmployeesResultSet = allEmployeesStatement.executeQuery();
+
+            out.println("<ul>");
+            while (allEmployeesResultSet.next()) {
+                out.println("<li>ID: " + allEmployeesResultSet.getInt("id") + ", Name: " + allEmployeesResultSet.getString("name") + "</li>");
+            }
+            out.println("</ul>");
+
+            connection.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.println("<p>Error: " + e.getMessage() + "</p>");
+        } finally {
+            out.close();
+        }
+    }
+}
